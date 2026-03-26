@@ -1,2 +1,7 @@
-fastapi
-uvicorn
+fastapi==0.115.12
+uvicorn==0.34.0
+sqlalchemy==2.0.40
+psycopg2-binary==2.9.11
+google-genai==1.12.1
+python-dotenv==1.0.1
+pydantic==2.12.5
