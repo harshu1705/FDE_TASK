@@ -6,7 +6,8 @@ export default function GraphVisualizer({ highlightedNodes }) {
   const graphRef = useRef();
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/graph/all')
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    fetch(`${apiUrl}/api/graph/all`)
       .then(res => res.json())
       .then(data => setGraphData(data))
       .catch(err => console.error("Could not fetch graph:", err));

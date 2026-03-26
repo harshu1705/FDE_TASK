@@ -3,10 +3,10 @@ import os
 from google import genai
 
 logger = logging.getLogger(__name__)
-api_keys = [
-    os.environ.get("GEMINI_API_KEY", "AIzaSyDEmnDxb2E97FJ8c3VLv4fPMYBgFVNr-A4"),
-    "AIzaSyAh_PSCS-3JoMnMeyyXisy8mO0nK7iBkZw"
-]
+raw_keys = os.environ.get("GEMINI_API_KEY", "")
+api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+if not api_keys:
+    api_keys = ["LOCAL_TEST"]
 clients = [genai.Client(api_key=k) for k in api_keys]
 
 def format_response(sql_result: list, user_query: str) -> str:

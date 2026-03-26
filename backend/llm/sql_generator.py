@@ -6,10 +6,10 @@ from .prompt import ERP_SQL_PROMPT
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-api_keys = [
-    os.environ.get("GEMINI_API_KEY", "AIzaSyDEmnDxb2E97FJ8c3VLv4fPMYBgFVNr-A4"),
-    "AIzaSyAh_PSCS-3JoMnMeyyXisy8mO0nK7iBkZw"
-]
+raw_keys = os.environ.get("GEMINI_API_KEY", "")
+api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+if not api_keys:
+    api_keys = ["LOCAL_TEST"]
 clients = [genai.Client(api_key=k) for k in api_keys]
 
 def extract_intent(user_query: str) -> str:
