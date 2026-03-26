@@ -1,6 +1,8 @@
 import sys
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
