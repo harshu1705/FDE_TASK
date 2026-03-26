@@ -56,6 +56,16 @@ graph TD
 
 ---
 
+## 📁 Repository Structure
+To satisfy evaluation requirements, the repository is structured as follows:
+- `/frontend/src/` - The complete React + Vite frontend source code focusing on the custom Chat and Force-Graph UI.
+- `/backend/` - The comprehensive Python FastAPI backend containing the PostgreSQL connector, LLM action pipeline, and data ingestion models. 
+- `/sessions/` - Exported AI-coding session transcripts documenting the rigorous speed and iteration cycles utilized to build this deployment.
+- `/sap-o2c-data/` - The original, unmodified SAP-like relational JSON fragments.
+- `ARCHITECTURE_AND_APPROACH.md` - Technical deep-dive on design and prompt structures.
+
+---
+
 ## 🛠️ Tech Stack
 - **Database:** PostgreSQL (Dockerized)
 - **Backend Framework:** Python, FastAPI, SQLAlchemy
