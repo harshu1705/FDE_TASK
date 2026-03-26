@@ -14,7 +14,7 @@ def execute_sql(db, sql_query: str) -> Tuple[List[Dict[str, Any]], str, List[str
         
         # 1. Query Cost Control Guardrail
         # Instructs PostgreSQL to unilaterally kill runaway/expensive scan queries after 2s.
-        db.execute(text("SET statement_timeout = 2000;"))
+        db.execute(text("SET statement_timeout = 10000;"))
         
         result = db.execute(text(sql_query)).mappings().all()
         data = [dict(row) for row in result]
