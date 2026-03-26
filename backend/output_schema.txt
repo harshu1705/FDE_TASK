@@ -1,0 +1,37 @@
+
+Table products:
+('product_id', 'text')
+('description', 'text')
+Count: 69
+
+Table orders:
+('order_id', 'text')
+('customer_id', 'text')
+('created_at', 'timestamp without time zone')
+Count: 100
+
+Table order_items:
+('id', 'integer')
+('order_id', 'text')
+('product_id', 'text')
+('quantity', 'integer')
+Count: 167
+
+Table invoices:
+('invoice_id', 'text')
+('delivery_id', 'text')
+('order_id', 'text')
+('total_amount', 'numeric')
+Count: 0
+
+Executing query:
+('3001468', 'Product 3001468', 0)
+('B8907367002246', 'Product B8907367002246', 0)
+('B8907367015697', 'Product B8907367015697', 0)
+('B8907367022152', 'Product B8907367022152', 0)
+('B8907367022787', 'Product B8907367022787', 0)
+('B8907367024125', 'Product B8907367024125', 0)
+('B8907367028406', 'Product B8907367028406', 0)
+('B8907367032571', 'Product B8907367032571', 0)
+('B8907367032649', 'Product B8907367032649', 0)
+('3001456', 'Product 3001456', 0)

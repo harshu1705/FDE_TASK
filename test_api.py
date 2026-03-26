@@ -26,6 +26,7 @@ for test in test_cases:
             print(f"\nSQL GENERATED:\n{data.get('sql')}")
             
         print("\nMETRICS:")
+        print(f"Confidence Score:{data.get('confidence', 'N/A')}")
         print(f"Rows Returned:   {data.get('rows_returned', 'N/A')}")
         print(f"Schema Version:  {data.get('schema_version', 'N/A')}")
         

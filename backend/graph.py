@@ -63,3 +63,55 @@ def trace_order_flow(db, order_id: str) -> Dict[str, Any]:
             seen_p.add(pid)
             
     return output
+
+def get_entire_graph(db, limit=300) -> Dict[str, Any]:
+    """
+    Returns a generalized graph structure of interconnected entities for visualization.
+    """
+    nodes = []
+    edges = []
+    
+    # 1. Orders and Customers
+    orders = db.execute(text("SELECT order_id, customer_id FROM orders LIMIT :limit"), {"limit": limit}).mappings().fetchall()
+    for o in orders:
+        nodes.append({"id": o["order_id"], "label": f"Order {o['order_id']}", "group": "order"})
+        if o["customer_id"]:
+            nodes.append({"id": o["customer_id"], "label": f"Cust {o['customer_id']}", "group": "customer"})
+            edges.append({"source": o["order_id"], "target": o["customer_id"], "type": "placed_by"})
+            
+    # 2. Deliveries
+    deliveries = db.execute(text("SELECT delivery_id, order_id FROM deliveries LIMIT :limit"), {"limit": limit}).mappings().fetchall()
+    for d in deliveries:
+        nodes.append({"id": d["delivery_id"], "label": f"Delivery {d['delivery_id']}", "group": "delivery"})
+        if d["order_id"]:
+            edges.append({"source": d["delivery_id"], "target": d["order_id"], "type": "fulfills_order"})
+            
+    # 3. Invoices
+    invoices = db.execute(text("SELECT invoice_id, order_id, delivery_id FROM invoices LIMIT :limit"), {"limit": limit}).mappings().fetchall()
+    for i in invoices:
+        nodes.append({"id": i["invoice_id"], "label": f"Invoice {i['invoice_id']}", "group": "invoice"})
+        if i["order_id"]:
+            edges.append({"source": i["invoice_id"], "target": i["order_id"], "type": "bills_order"})
+        if i["delivery_id"]:
+            edges.append({"source": i["invoice_id"], "target": i["delivery_id"], "type": "bills_delivery"})
+
+    # 4. Payments
+    payments = db.execute(text("SELECT payment_id, invoice_id FROM payments LIMIT :limit"), {"limit": limit}).mappings().fetchall()
+    for p in payments:
+        nodes.append({"id": p["payment_id"], "label": f"Payment {p['payment_id']}", "group": "payment"})
+        if p["invoice_id"]:
+            edges.append({"source": p["payment_id"], "target": p["invoice_id"], "type": "pays_invoice"})
+
+    # 5. Order Items & Products
+    order_items = db.execute(text("SELECT id, order_id, product_id FROM order_items LIMIT :limit"), {"limit": limit}).mappings().fetchall()
+    for oi in order_items:
+        oi_id = f"oi_{oi['id']}"
+        nodes.append({"id": oi_id, "label": f"Item {oi['id']}", "group": "order_item"})
+        nodes.append({"id": oi["product_id"], "label": f"Product {oi['product_id']}", "group": "product"})
+        if oi["order_id"]:
+            edges.append({"source": oi["order_id"], "target": oi_id, "type": "contains_item"})
+        if oi["product_id"]:
+            edges.append({"source": oi_id, "target": oi["product_id"], "type": "is_product"})
+
+    unique_nodes = list({n["id"]: n for n in nodes}.values())
+    return {"nodes": unique_nodes, "links": edges}

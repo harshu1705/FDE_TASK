@@ -1,0 +1,6 @@
+{
+    "answer": "The AI pipeline failed to isolate valid synthetic SQL bounded properly inside validation timeouts.",
+    "sql": "SELECT\n    p.description,\n    COUNT(i.invoice_id) AS total_invoices\nFROM\n    products AS p\nLEFT JOIN\n    order_items AS oi ON p.product_id = oi.product_id\nLEFT JOIN\n    orders AS o ON oi.order_id = o.order_id\nLEFT JOIN\n    deliveries AS d ON o.order_id = d.order_id\nLEFT JOIN\n    invoices AS i ON d.delivery_id = i.delivery_id\nGROUP BY\n    p.description\nORDER BY\n    total_invoices DESC\nLIMIT 10;",
+    "data": [],
+    "confidence": "fallback"
+}

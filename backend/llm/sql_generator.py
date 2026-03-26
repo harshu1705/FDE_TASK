@@ -6,7 +6,11 @@ from .prompt import ERP_SQL_PROMPT
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY", "AIzaSyAh_PSCS-3JoMnMeyyXisy8mO0nK7iBkZw"))
+api_keys = [
+    os.environ.get("GEMINI_API_KEY", "AIzaSyDEmnDxb2E97FJ8c3VLv4fPMYBgFVNr-A4"),
+    "AIzaSyAh_PSCS-3JoMnMeyyXisy8mO0nK7iBkZw"
+]
+clients = [genai.Client(api_key=k) for k in api_keys]
 
 def extract_intent(user_query: str) -> str:
     """
@@ -24,10 +28,25 @@ def extract_intent(user_query: str) -> str:
     USER QUERY: {user_query}
     """
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt
-        )
+        response = None
+        success = False
+        for current_client in clients:
+            if success: break
+            for model_name in ['gemini-2.5-flash', 'gemini-1.5-flash']:
+                try:
+                    response = current_client.models.generate_content(
+                        model=model_name,
+                        contents=prompt
+                    )
+                    success = True
+                    break
+                except Exception as inner_e:
+                    logger.warning(f"Error for {model_name} with a key: {inner_e}. Falling back...")
+                    continue
+                
+        if not success or not response:
+            raise Exception("All models and keys exhausted.")
+            
         result = response.text.strip()
         logger.info(f"Step 1 Dynamic NLP Intent: {result}")
         return result
@@ -44,10 +63,25 @@ def generate_sql(user_query: str, intent_context: str, error_context: str = None
         prompt += f"\n\nERROR IN PREVIOUS SQL ATTEMPT: {error_context}\nPlease correct the SQL syntactically."
         
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt
-        )
+        response = None
+        success = False
+        for current_client in clients:
+            if success: break
+            for model_name in ['gemini-2.5-flash', 'gemini-1.5-flash']:
+                try:
+                    response = current_client.models.generate_content(
+                        model=model_name,
+                        contents=prompt
+                    )
+                    success = True
+                    break
+                except Exception as inner_e:
+                    logger.warning(f"Error for {model_name} with a key: {inner_e}. Falling back...")
+                    continue
+
+        if not success or not response:
+            raise Exception("All models and keys exhausted.")
+
         sql = response.text.strip()
         
         if sql.startswith("```sql"): sql = sql[6:]

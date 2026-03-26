@@ -14,7 +14,9 @@ Table: payments(payment_id TEXT PRIMARY KEY, invoice_id TEXT REFERENCES invoices
 RULES:
 - Only generate valid SELECT queries.
 - Always use JOIN for relationships explicitly defined in the schema.
-- Use LEFT JOIN for anomaly detection (e.g. orders without deliveries, tracking broken flows).
+- For analytical queries like "top products", use LEFT JOIN instead of INNER JOIN when joining invoices.
+- This ensures products with partial or missing billing flows are still included.
+- Always handle incomplete ERP flows using LEFT JOIN.
 - Never assume tables or columns not explicitly listed in the schema.
 - Always include LIMIT 10 at the end of every query.
 - DO NOT wrap the SQL in markdown blocks. Output ONLY raw SQL code.
