@@ -15,11 +15,9 @@ export default function ChatInterface({ onHighlightNodes }) {
     }
   }, [messages]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
+  const sendQuery = async (userMsg) => {
+    if (!userMsg.trim() || loading) return;
 
-    const userMsg = input.trim();
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setLoading(true);
@@ -33,7 +31,12 @@ export default function ChatInterface({ onHighlightNodes }) {
       
       const data = await res.json();
       
-      setMessages(prev => [...prev, { role: 'agent', text: data.answer || "No response." }]);
+      setMessages(prev => [...prev, { 
+        role: 'agent', 
+        text: data.answer || "No response.", 
+        sql: data.sql, 
+        table: data.data 
+      }]);
       
       if (data.highlight_nodes) {
         onHighlightNodes(data.highlight_nodes);
@@ -42,10 +45,15 @@ export default function ChatInterface({ onHighlightNodes }) {
       }
       
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'agent', text: "Error communicating with the backend API." }]);
+      setMessages(prev => [...prev, { role: 'agent', text: "Error communicating with the API." }]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    sendQuery(input);
   };
 
   return (
@@ -62,11 +70,51 @@ export default function ChatInterface({ onHighlightNodes }) {
          {messages.map((msg, idx) => (
            <div key={idx} className={`message ${msg.role}`}>
              <div className="message-bubble">{msg.text}</div>
+             {msg.sql && (
+               <div className="sql-block">
+                 <strong>SQL EXECUTED:</strong><br/>
+                 {msg.sql}
+               </div>
+             )}
+             {msg.table && msg.table.length > 0 && (
+               <div className="table-block">
+                 <table>
+                   <thead>
+                     <tr>
+                       {Object.keys(msg.table[0]).map(k => <th key={k}>{k}</th>)}
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {msg.table.slice(0, 5).map((row, i) => (
+                       <tr key={i}>
+                         {Object.values(row).map((v, j) => <td key={j}>{String(v)}</td>)}
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+                 {msg.table.length > 5 && <div style={{fontSize: '10px', padding: '4px 8px', color: '#64748b'}}>Showing 5 of {msg.table.length} rows...</div>}
+               </div>
+             )}
            </div>
          ))}
          {loading && (
            <div className="message agent">
              <div className="message-bubble" style={{ opacity: 0.6 }}>Thinking...</div>
+           </div>
+         )}
+         
+         {/* Demo Buttons */}
+         {!loading && (
+           <div className="quick-actions">
+             <button className="quick-action-btn" onClick={() => sendQuery("Which products are associated with the highest number of billing documents?")}>
+               Top products
+             </button>
+             <button className="quick-action-btn" onClick={() => sendQuery("Identify sales orders that have broken flows (delivered but not billed)")}>
+               Orders without invoices
+             </button>
+             <button className="quick-action-btn" onClick={() => sendQuery("Trace the full flow for a given billing document")}>
+               Trace order
+             </button>
            </div>
          )}
       </div>

@@ -64,7 +64,7 @@ def trace_order_flow(db, order_id: str) -> Dict[str, Any]:
             
     return output
 
-def get_entire_graph(db, limit=300) -> Dict[str, Any]:
+def get_entire_graph(db, limit=50) -> Dict[str, Any]:
     """
     Returns a generalized graph structure of interconnected entities for visualization.
     """

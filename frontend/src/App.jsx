@@ -8,6 +8,9 @@ function App() {
   return (
     <div className="app-container">
        <div className="graph-container">
+          <div className="top-bar">
+            <span>Mapping / Order to Cash</span>
+          </div>
           <GraphVisualizer highlightedNodes={highlightedNodes} />
        </div>
        <ChatInterface onHighlightNodes={setHighlightedNodes} />
