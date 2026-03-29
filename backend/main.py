@@ -43,14 +43,16 @@ def process_intelligent_query(req: QueryRequest, db = Depends(get_db)):
     
     # 1. Step 1 Optimized Pipeline Request Filter & Intent Capture
     intent_context = extract_intent(user_query)
-    
-    if "PURE_GUARDRAIL_BLOCK" in intent_context:
+
+    if "PURE_GUARDRAIL_BLOCK" in intent_context and "Exception Log Context" not in intent_context:
         return {
             "answer": "This system exclusively supports dataset-related queries. (Or verify your GEMINI_API_KEY is exported before starting the server).",
             "sql": None,
             "data": [],
             "confidence": "fallback"
         }
+
+    # if intent comes from an API fault path (e.g. key missing), we continue with local/python fallback
 
     error_context = None
     max_retries = 2
@@ -103,13 +105,15 @@ def process_intelligent_query(req: QueryRequest, db = Depends(get_db)):
             }
             
         except Exception as e:
-            logger.error(f"Execution sequence failed iteration {attempt+1}: {e}")
+            logger.error(f"Execution sequence failed iteration {attempt+1}: {e}", exc_info=True)
             error_context = f"PostgreSQL Execution Failure: {str(e)}. Re-evaluate schema natively and repair syntax."
+            last_error = str(e)
             
     return {
         "answer": "The AI pipeline failed to isolate valid synthetic SQL bounded properly inside validation timeouts.",
         "sql": sql_query,
         "data": [],
+        "error": last_error if 'last_error' in locals() else None,
         "confidence": "fallback"
     }
 
