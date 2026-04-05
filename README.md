@@ -79,10 +79,26 @@ To satisfy evaluation requirements, the repository is structured as follows:
 ### 1. Start the Database
 Ensure Docker is running, then spin up the container and build the underlying schema:
 ```bash
-# Using the provided setup script:
+# Check Docker status first:
+docker ps
+# Start the container (idempotent path):
 ./setup_db.ps1
-# Or run manually:
-docker run --name fde_postgres -e POSTGRES_PASSWORD=postgres -d -p 5432:5432 postgres:15
+# Or run manually if script fails:
+# if container exists, start it
+if docker ps -a --format "{{.Names}}" | findstr fde_postgres >nul; then
+  docker start fde_postgres
+else
+  docker run --name fde_postgres -e POSTGRES_PASSWORD=postgres -d -p 5432:5432 postgres:15
+fi
+# Inspect the DB logs:
+docker logs -n 30 fde_postgres
+```
+
+### 1a. Quick DB sanity checks
+```bash
+# Check the schema and row counts
+docker exec -it fde_postgres psql -U postgres -d postgres -c "SELECT COUNT(*) FROM orders;"
+docker exec -it fde_postgres psql -U postgres -d postgres -c "SELECT COUNT(*) FROM invoices;"
 ```
 
 ### 2. Populate the Data
@@ -115,6 +131,17 @@ npm install
 npm run dev
 ```
 *The application UI will deploy locally at `http://localhost:5173`.*
+
+### 5. Run Smoke Tests
+From repository root (DODGE_AI_FDE TASK):
+```bash
+pip install -r backend/requirements.txt
+pip install pytest
+pytest -q test_local.py
+```
+
+- `test_local.py` now includes `test_health_check()` against `GET /health` and end-to-end query smoke tests.
+- If `health_check` fails, confirm Docker/PostgreSQL container is running and `/health` returns service up.
 
 ---
 

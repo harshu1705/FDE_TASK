@@ -125,7 +125,15 @@ def get_entire_graph(db, limit=50) -> Dict[str, Any]:
                 edges.append({"source": oi_id, "target": oi["product_id"], "type": "is_product"})
 
         unique_nodes = list({n["id"]: n for n in nodes}.values())
-        return {"nodes": unique_nodes, "links": edges}
+        # Deduplicate edges by source+target+type to avoid visual artifacts
+        seen_edges = set()
+        unique_edges = []
+        for e in edges:
+            key = (e["source"], e["target"], e.get("type", ""))
+            if key not in seen_edges:
+                seen_edges.add(key)
+                unique_edges.append(e)
+        return {"nodes": unique_nodes, "links": unique_edges}
     except Exception as e:
         logger.warning(f"get_entire_graph DB error: {e}")
         # Provide fallback graph to keep UI alive

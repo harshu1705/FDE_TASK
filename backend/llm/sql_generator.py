@@ -6,12 +6,13 @@ from .prompt import ERP_SQL_PROMPT
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-raw_keys = os.environ.get("GEMINI_API_KEY", "").strip()
-api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
-if not api_keys:
-    logger.warning("No GEMINI_API_KEY set; using local fallback mode for intent/sql generation.")
-    api_keys = []
-clients = [genai.Client(api_key=k) for k in api_keys]
+def _get_clients():
+    raw_keys = os.environ.get("GEMINI_API_KEY", "").strip().strip('"').strip("'")
+    api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+    if not api_keys:
+        logger.warning("No GEMINI_API_KEY set; using local fallback mode for intent/sql generation.")
+        return []
+    return [genai.Client(api_key=k) for k in api_keys]
 
 
 def _local_intent_fallback(user_query: str) -> str:
@@ -38,7 +39,7 @@ def _local_sql_fallback(user_query: str, intent_context: str = None) -> str:
         )
     if "orders without invoices" in q or "orders without invoice" in q:
         return (
-            "SELECT o.order_id, o.order_date, o.customer_id "
+            "SELECT o.order_id, o.created_at, o.customer_id "
             "FROM orders o "
             "LEFT JOIN deliveries d ON o.order_id = d.order_id "
             "LEFT JOIN invoices i ON d.delivery_id = i.delivery_id "
@@ -68,9 +69,10 @@ def extract_intent(user_query: str) -> str:
     try:
         response = None
         success = False
+        clients = _get_clients()
         for current_client in clients:
             if success: break
-            for model_name in ['gemini-2.5-flash', 'gemini-1.5-flash']:
+            for model_name in ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']:
                 try:
                     response = current_client.models.generate_content(
                         model=model_name,
@@ -90,7 +92,8 @@ def extract_intent(user_query: str) -> str:
         return result
     except Exception as e:
         logger.error(f"GenAI Intent Failure Tracker: {e}")
-        if not api_keys:
+        clients = _get_clients()
+        if not clients:
             # No API keys configured; do local fallback instead of hard blocking.
             return _local_intent_fallback(user_query)
         return f"PURE_GUARDRAIL_BLOCK Exception Log Context: {e}"
@@ -104,7 +107,8 @@ def generate_sql(user_query: str, intent_context: str, error_context: str = None
         prompt += f"\n\nERROR IN PREVIOUS SQL ATTEMPT: {error_context}\nPlease correct the SQL syntactically."
         
     try:
-        if not api_keys:
+        clients = _get_clients()
+        if not clients:
             logger.info("No GenAI key configured: using local SQL fallback logic.")
             return _local_sql_fallback(user_query, intent_context)
 
@@ -112,7 +116,7 @@ def generate_sql(user_query: str, intent_context: str, error_context: str = None
         success = False
         for current_client in clients:
             if success: break
-            for model_name in ['gemini-2.5-flash', 'gemini-1.5-flash']:
+            for model_name in ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']:
                 try:
                     response = current_client.models.generate_content(
                         model=model_name,

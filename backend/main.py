@@ -5,7 +5,10 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 sys.path.append(str(Path(__file__).parent))
 from database import SessionLocal
@@ -30,6 +33,16 @@ def get_db():
         yield db
     finally:
         db.close()
+
+@app.get('/health')
+def health_check():
+    try:
+        db = SessionLocal()
+        db.execute(text('SELECT 1'))
+        db.close()
+        return {'status': 'ok', 'db': 'connected'}
+    except SQLAlchemyError as e:
+        return JSONResponse(status_code=503, content={'status': 'error', 'db': 'unavailable', 'error': str(e)})
 
 class QueryRequest(BaseModel):
     query: str
@@ -62,6 +75,10 @@ def process_intelligent_query(req: QueryRequest, db = Depends(get_db)):
         try:
             # 2. Step 2 Advanced SQL Generation
             sql_query = generate_sql(user_query, intent_context, error_context)
+            
+            # 2a. Avoid placeholder pass-through; require meaningful domain query
+            if sql_query.strip().lower().startswith("select 1 as placeholder"):
+                raise Exception("Fallback produced placeholder SQL; unable to resolve a meaningful ERP query from user intent.")
             
             # 3. Strict Execution Validation Guardrails
             try:
@@ -119,12 +136,18 @@ def process_intelligent_query(req: QueryRequest, db = Depends(get_db)):
 
 @app.get("/api/graph/trace/{order_id}")
 def trace_complete_erp_flow(order_id: str, db = Depends(get_db)):
-    result = trace_order_flow(db, order_id)
-    if "error" in result:
-        raise HTTPException(status_code=404, detail=result["error"])
-    return result
+    try:
+        result = trace_order_flow(db, order_id)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=503, detail=f"DB unreachable: {e}")
 
 @app.get("/api/graph/all")
 def get_graph_all(db = Depends(get_db)):
-    result = get_entire_graph(db)
-    return result
+    try:
+        result = get_entire_graph(db)
+        return result
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=503, detail=f"DB unreachable: {e}")

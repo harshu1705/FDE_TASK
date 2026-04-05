@@ -3,11 +3,21 @@ import os
 from google import genai
 
 logger = logging.getLogger(__name__)
-raw_keys = os.environ.get("GEMINI_API_KEY", "")
-api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
-if not api_keys:
-    api_keys = ["LOCAL_TEST"]
-clients = [genai.Client(api_key=k) for k in api_keys]
+
+def _get_genai_clients():
+    raw_keys = os.environ.get("GEMINI_API_KEY", "").strip().strip('"').strip("'")
+    api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+    if not api_keys:
+        logger.warning("No GEMINI_API_KEY set; using local fallback response formatter mode.")
+        return []
+
+    clients = []
+    for key in api_keys:
+        try:
+            clients.append(genai.Client(api_key=key))
+        except Exception as e:
+            logger.warning(f"Invalid Gemini key ignored: {e}")
+    return clients
 
 def format_response(sql_result: list, user_query: str) -> str:
     """
@@ -30,6 +40,10 @@ def format_response(sql_result: list, user_query: str) -> str:
     try:
         response = None
         success = False
+        clients = _get_genai_clients()
+        if not clients:
+            raise Exception("No valid Gemini client configured.")
+
         for current_client in clients:
             if success: break
             for model_name in ['gemini-2.5-flash', 'gemini-1.5-flash']:
@@ -43,7 +57,7 @@ def format_response(sql_result: list, user_query: str) -> str:
                 except Exception as inner_e:
                     logger.warning(f"Error for {model_name} with a key: {inner_e}. Falling back...")
                     continue
-                
+
         if not success or not response:
             raise Exception("All models and keys exhausted.")
             
